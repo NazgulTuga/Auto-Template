@@ -82,9 +82,22 @@ teste
 			  <td>{i}</td>
 			  <!-- echo: mt_rand(); -->
 			  <td>{random}</td>
-				<td>{id_treinador}</td>
+				<td>{id}</td>
 				<td>{nome}</td>
 			</tr>
 			{/loop}
 		</tbody>
 	</table>
+=====
+
+| ID  | Name |
+| ------------- | ------------- |
+| 123 | Paulo José Mota  |
+| 456 | Pedro Miguel Mota  |
+
+| Row  | Random | ID  | Name |
+| ------------- | ------------- | ------------- | ------------- |
+| 1 | xF62bGF81Mj | 123 | Paulo José Mota  |
+| 2 | PoF93d0aJO | 456 | Pedro Miguel Mota  |
+| 123 | Paulo José Mota  |
+| 456 | Pedro Miguel Mota  |
