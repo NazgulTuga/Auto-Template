@@ -7,7 +7,7 @@ teste
 	require_once('dbTblTreinador.class.php');
 	$tblTreinador = new dbTblTreinador();
 	
-	$tblAutoTpl-><b>addObject</b>('treinador',$tblTreinador);
+	$tblAutoTpl->*addObject*('treinador',$tblTreinador);
 	
 	//Adds a new kind of Markup
 	$tblAutoTpl->**setMarkupType**('pico');
