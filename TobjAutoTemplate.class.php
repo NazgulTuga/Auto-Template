@@ -8,9 +8,6 @@
 	*  Date-update: 
 	*
 	*********************************************************************** */
-	
-	#error_reporting(E_ALL);
-	#ini_set('display_errors', 1);
 
 	# http://phpduck.com/php-static-methods-and-properties/
 	# http://r.je/static-methods-bad-practice.html
