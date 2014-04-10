@@ -58,10 +58,10 @@ teste
 				// Executes a normal Function AND echo the result in this position
 				{echo **func**="FunccaoNormal" **params**="['Markup novo PICO']"}{/echo}
 				
-				// Executes a Function from a Created Object AND echo the result in this position
+				// Executes a Function from a Created Object
 				{hook obj="treinador" func="testeNew" params="[]"}{/hook}
 				
-				// Executes a Function from a Created Object AND echo the result in this position
+				// Executes a Function from a Created Object
 				{func obj="treinador" func="testeNew" params="[]"}{/func}
 				
 				// Executes a Function from a Created Object AND echo the result in this position
