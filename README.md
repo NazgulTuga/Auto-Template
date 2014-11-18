@@ -75,14 +75,11 @@
 		<tbody>
 		  <!-- Executes a Function from a Created Object AND replace the values inside the "loop" tags. -->
 		  <!-- return array = array(0=>['id'=>'123', 'name'=>'Paulo José Mota'], -->
-		  <!-- 			    1=>['id'=>'456', 'name'=>'Pedro Miguel Mota']); -->
+		  <!--                      1=>['id'=>'456', 'name'=>'Pedro Miguel Mota']); -->
 			{loop obj="treinador" func="search" params="['name';'P']"}
 			<tr>
-			  	<!-- echo: 1, 2, 3, 4 (Automaticaly) -->
-			  	<td>**{i}**</td>
-			  	<!-- echo: mt_rand(); (Automaticaly) -->
-			  	<td>**{random}**</td>
-			  	
+			  	<td>{i}</td> <!-- echo: 1, 2, 3, 4 (Automaticaly) -->
+			  	<td>{random}</td> <!-- echo: mt_rand(); (Automaticaly) -->
 				<td>{id}</td>
 				<td>{nome}</td>
 			</tr>
