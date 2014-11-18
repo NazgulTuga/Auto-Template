@@ -18,6 +18,16 @@
 	# http://coding.smashingmagazine.com/2011/10/17/getting-started-with-php-templating/
 	# http://www.broculos.net/2008/03/how-to-make-simple-html-template-engine.html#.UzmomufdWhM
 
+	# RegEx - Regular Expressions
+	# http://www.autohotkey.com/docs/misc/RegEx-QuickRef.htm
+	# http://weblogtoolscollection.com/regex/regex.php
+	# http://forums.phpfreaks.com/topic/117560-regex-get-html-tag-attribute-value/
+	# http://www.regexlib.com/?AspxAutoDetectCookieSupport=1
+	# http://www.php.net/manual/fr/regexp.reference.recursive.php#95568
+	# http://stackoverflow.com/questions/1721223/php-regexp-for-nested-div-tags
+	# http://stackoverflow.com/questions/1422553/preg-match-for-nested-html-tags
+	#
+
 	class TobjAutoTemplate
 	{
 		public $listObjects 	= array();
@@ -26,7 +36,7 @@
 		public $listPostActions = array();
 		public $HTML 			= '';
 		public static $listCallbacks  = array();
-		public static $listMarkupType = array('echo','func','hook','loop');
+		public static $listMarkupType = array('echo','form','func','hook','loop');
 
 		public function __construct()
 		{
@@ -38,11 +48,12 @@
 			unset($this->listFunctions);
 			unset($this->listValues);
 			unset($this->listPostActions);
-			#unset($this::$listCallbacks);
+			#unset(self::$listCallbacks);
 			unset($this->HTML);
 		}
 		###########################################################################################
-		private function ms_escape_string($data)
+		# http://www.phpkode.com/source/p/pyrocms/pyrocms-2.2.1/tests/mocks/core/common.php
+		private function ms_escape($data)
 		{
 			$non_displayables = array(
 			'/%0[0-8bcef]/', 			# url encoded 00-08, 11, 12, 14, 15
@@ -50,14 +61,15 @@
 			'/[\x00-\x08]/', 			# 00-08
 			'/\x0b/', 					# 11
 			'/\x0c/', 					# 12
-			'/[\x0e-\x1f]/' 			# 14-31
+			'/[\x0e-\x1f]/', 			# 14-31
+			'/x7F/' 					# 127
 			);
-
 			foreach ($non_displayables as $regex)
 			{
-				$data = preg_replace($regex, '', $data);
+				$data = preg_replace($regex,'',$data);
 			}
-			$search  = array("\0","\n","\r","\x1a","\t");
+			#"\n"
+			$search  = array("\0","\r","\x1a","\t");
 			$data 	 = str_replace($search,'',$data);
 
 			return trim($data);
@@ -67,19 +79,19 @@
 		private function resetListFunctions() 				{ $this->listFunctions 		= array(); }
 		private function resetListValues() 					{ $this->listValues 		= array(); }
 		private function resetListPostActions() 			{ $this->listPostActions 	= array(); }
-		public function setMarkupType($AsMarkupName) 		{ $this::$listMarkupType[] = $AsMarkupName; }
+		public function setMarkupType($AsMarkupName) 		{ self::$listMarkupType[]  = $AsMarkupName; }
 		public function setVar($AKey, $AValue) 				{ $this->listValues[$AKey] = $AValue; }
 		public function setCallback($AsMarkupName,$AObject,$AsFuncName,$AsParams=array(),$AbReplace=false)
 		{
-			if ((!isset($this::$listCallbacks[$AsMarkupName])) || ($AbReplace==true))
+			if ((!isset(self::$listCallbacks[$AsMarkupName])) || ($AbReplace==true))
 			{
-				$this::$listCallbacks[$AsMarkupName] = array(
-					'object'=> $AObject,
-					'function' => $AsFuncName,
-					'params' => $AsParams);
+				self::$listCallbacks[$AsMarkupName] = array(
+					'object' 	=> $AObject,
+					'function' 	=> $AsFuncName,
+					'params' 	=> $AsParams);
 			}
 		}
-		public function cleanVariables()
+		public function reset()
 		{
 			$this->resetListFunctions();
 			$this->resetListValues();
@@ -87,7 +99,7 @@
 		}
 		private function getFileContent($AsFileName)
 		{
-			$this->HTML = $this->ms_escape_string(file_get_contents($AsFileName));
+			$this->HTML = $this->ms_escape(file_get_contents($AsFileName));
 		}
 		private function runReplaceVars()
 		{
@@ -125,28 +137,40 @@
 				return false;
 		}
 
-		private function getFunctions()
+		private function getFunctions($AsHTML=false)
 		{
+			if (!$AsHTML) $AsHTML = $this->HTML;
 			$auxArray = array();
-			preg_match_all('/{(.*?) (.*?)}(.*?){\/(.*?)}/',$this->HTML,$output);
-			#preg_match_all('/{(.*?) (.*?)}([^`]*?){\/(.*?)}/',$this->HTML,$output);
+			#preg_match_all('/{([a-zA-Z0-9_]*?) (.*?)}(.*?|(?R)){\/1}/',$this->HTML,$output);
+			preg_match_all('/{([a-zA-Z0-9_]+) (.*?)}((([^{]*?)|(?R)).*?){\/\\1}/sm',$AsHTML,$output);
 			#var_dump($output);
-			foreach ($output[0] as $key => $value)
+			foreach ($output[0] as $key => &$value)
 			{
-				$auxArray[$key] = array();
-				$auxArray[$key]['outerhtml'] 	= $value;
-				$auxArray[$key]['markup'] 		= $output[1][$key];
-				$auxArray[$key]['attributes'] 	= $this->getAttributes($output[2][$key]);
-				$auxArray[$key]['innerhtml'] 	= $output[3][$key];
+				$auxArray[$key] = array(
+					'outerhtml' => $value,
+					'markup' 	=> $output[1][$key],
+					'attributes'=> $this->getAttributes($output[2][$key]),
+					'innerhtml' => $output[3][$key]
+				);
+				$att = &$auxArray[$key]['attributes'];
+				if (!isset($att['obj'])) 		$att['obj'] = '';
+				if (!isset($att['class'])) 		$att['class'] = '';
+				if (!isset($att['func'])) 		$att['func'] = '';
+				if (!isset($att['jsonparams'])) $att['jsonparams'] = '';
+				if (!isset($att['jsonencode'])) $att['jsonencode'] = '';
+				if (!isset($att['postaction'])) $att['postaction'] = false;
+				$att['params'] 		= (!isset($att['params'])) 		? '' : $this->processParams($att['params']);
+				$att['jsonparams'] 	= (!isset($att['jsonparams'])) 	? '' : $this->processJsonParams($att['jsonparams'],$att['jsonencode']);
 				#$auxArray[$key]['markup'] 		= ($value === '') ? $output[4][$key] : $value;
 			}
+			
 			return $auxArray;
 		}
 		private function getPostActions()
 		{
-			$auxArray = array();
 			preg_match_all('/{% (.*?) %}/',$this->HTML,$output);
 			#var_dump($output);
+			$auxArray = array();
 			foreach ($output[0] as $key => $value)
 			{
 				$auxArray[$output[1][$key]] = array();
@@ -166,7 +190,7 @@
 
 		private function getAttributes($AsString)
 		{
-			preg_match_all('/(.*?)="(.*?)"/is', $AsString, $matches);
+			preg_match_all('/(.*?)="(.*?)"/', $AsString, $matches);
 			#var_dump($matches);
 			$Result = array();
 			foreach ($matches[1] as $key => $value)
@@ -223,19 +247,42 @@
 						{
 							$AsJson = base64_decode($AsJson);
 						} break;
-					default:
+					default: 
 						{
-
+							$AsJson = urldecode($AsJson);
 						} break;
 				}
 				$Result = json_decode($AsJson,true);
 			}
 			return $Result;
 		}
+		private function executeFunction($AsObject,$AsClass,$AsFunction,$AsParams)
+		{
+			$Result = false;
+			if (($AsObject !== '') && ($objTbl = $this->getObject($AsObject)))
+			{
+				$Result = call_user_func_array(array($objTbl, $AsFunction), $AsParams);
+			}
+			else
+			if ($AsClass !== '')
+			{
+				if (method_exists($AsClass, $AsFunction))
+					$Result = call_user_func_array(array($AsClass, $AsFunction), $AsParams);
+			}
+			else
+			if ($AsFunction !== '')
+			{
+				$Result = call_user_func_array($AsFunction, $AsParams);
+			}
+
+			return $Result;
+		}
 		private function runLoops($AaLoops=false)
 		{
-			$this->listFunctions = ($AaLoops !== false) ? $AaLoops : $this->listFunctions;
-			#ksort($AaLoops); #Ordena Array por Key
+			if ($AaLoops !== false)
+				$this->listFunctions = $AaLoops;
+			if (count($this->listFunctions) == 0)
+				return false;
 
 			$arrToSearch  = array();
 			$arrToReplace = array();
@@ -246,33 +293,21 @@
 				$loop 		= $arrVal['innerhtml'];
 				$arrRes 	= $arrVal['attributes'];
 
-				$sObject 	= (isset($arrRes['obj'])) 		? $arrRes['obj'] 	: '';
-				$sClass 	= (isset($arrRes['class'])) 	? $arrRes['class'] 	: '';
-				$function 	= (isset($arrRes['func'])) 		? $arrRes['func'] 	: '';
-				$params 	= (isset($arrRes['params']))	? $this->processParams($arrRes['params']) : '';
-				$json 		= (isset($arrRes['jsonparams']))? $arrRes['jsonparams'] : '';
-				$jsonencode = (isset($arrRes['jsonencode']))? $arrRes['jsonencode'] : '';
-				$postaction = (isset($arrRes['postaction']))? $this->setAsBoolean($arrRes['postaction']) : false;
-				$params 	= ($params !== '') ? $params : $this->processJsonParams($json,$jsonencode);
+				#$sObject 	= $arrRes['obj'];
+				#$sClass 	= $arrRes['class'];
+				#$function 	= $arrRes['func'];
+				$params 	= ($arrRes['params'] !== '') ? $arrRes['params'] : $arrRes['jsonparams'];
+				#$json 		= $arrRes['jsonparams'];
+				#$jsonencode = $arrRes['jsonencode'];
+				$postaction = $arrRes['postaction'];
+
 
 				$htmlReplace = '';
 				$Result 	 = false;
-				if (($sObject !== '') && ($objTbl = $this->getObject($sObject)))
-				{
-					$Result = call_user_func_array(array($objTbl, $function), $params);
-				}
-				else
-				if ($sClass !== '')
-				{
-					$Result = call_user_func_array(array($sClass, $function), $params);
-				}
-				else
-				{
-					$Result = call_user_func_array($function, $params);
-				}
+				$Result 	 = $this->executeFunction($arrRes['obj'],$arrRes['class'],$arrRes['func'],$params);
 
 				#Execute an action when function completed? (echo)
-				if ($postaction == true)
+				if (($postaction == true) && (isset($this->listPostActions[$sMarkup])))
 				{
 					$sPostOuterHtml = $this->listPostActions[$sMarkup]['outerhtml'];
 					$this->HTML 	= str_ireplace($sPostOuterHtml, $Result, $this->HTML);
@@ -286,11 +321,12 @@
 				#If there is no Errors
 				if ($Result)
 				{
-					if (isset($this::$listCallbacks[$sMarkup]))
+					# Checks if a Markup action was overrited
+					if (isset(self::$listCallbacks[$sMarkup]))
 					{
-						$objCall 	= $this::$listCallbacks[$sMarkup]['object'];
-						$funcCall 	= $this::$listCallbacks[$sMarkup]['function'];
-						$parCall 	= $this::$listCallbacks[$sMarkup]['params'];
+						$objCall 	= self::$listCallbacks[$sMarkup]['object'];
+						$funcCall 	= self::$listCallbacks[$sMarkup]['function'];
+						$parCall 	= self::$listCallbacks[$sMarkup]['params'];
 
 						# IF is NOT an object, getObject($AsObjName);
 						if (!is_object($objCall))
@@ -299,30 +335,42 @@
 						}
 						$funcResult = call_user_func_array(array($objCall, $funcCall), $parCall);
 						
-						if (is_array($funcResult))
+						if (isset($funcResult['echo']) && ($funcResult['echo'] == true))
 						{
-							if (isset($funcResult['echo']))
-								$htmlReplace = $funcResult['value'];
+							$htmlReplace = $funcResult['value'];
 						}
 						else
-							$htmlReplace =  $funcResult;
+						{
+							$htmlReplace = $funcResult;
+						}
 					}
 					else
 					{
 						switch ($sMarkup)
 						{
+							case 'form':
 							case 'loop':
 								{
 									$arrhtml = array();
-									foreach($Result['ROW'] as $key => $arrValue)
+									$ResultsRow = (isset($Result['rows'])) ? $Result['rows'] : $Result;
+									
+									foreach($ResultsRow as $key => &$arrValue)
 									{
-										$auxLoop = str_ireplace('{i}', ($key+1), $loop);
-										$auxLoop = str_ireplace('{random}', substr(md5(mt_rand(0,999)),0,10), $loop);
-										foreach($arrValue as $key2 => $value)
+										$aKeys = array();
+										$aVal  = array();
+
+										$aKeys[] = '{i}';
+										$aVal[]  = ($key+1);
+										$aKeys[] = '{random}';
+										$aVal[]  = substr(md5(mt_rand(0,999)),0,10);
+
+										foreach($arrValue as $key2 => &$value)
 										{
-											$auxLoop = str_ireplace('{'.$key2.'}', $value, $auxLoop);
+											$aKeys[] = "{".$key2."}";
+											$aVal[]  = (mb_check_encoding($value, 'UTF-8')) ? $value : utf8_encode($value);
 										}
-										$arrhtml[] = $auxLoop;
+										$arrhtml[$key] = str_ireplace($aKeys, $aVal, $loop);
+										$this->eventLoop($this->getFunctions($arrhtml[$key]),$arrhtml[$key]);
 									}
 									$htmlReplace = implode($arrhtml);
 								} break;
@@ -350,14 +398,42 @@
 			}
 			$this->HTML = str_ireplace($arrToSearch, $arrToReplace, $this->HTML);
 		}
+		private function eventLoop($AobjLoop,&$AsHTML)
+		{
+			foreach($AobjLoop as $pos => &$arrVal)
+			{
+				$outerhtml 	= $arrVal['outerhtml'];
+				$sMarkup 	= $arrVal['markup'];
+				$loop 		= $arrVal['innerhtml'];
+				$arrRes 	= $arrVal['attributes'];
+				$params 	= ($arrRes['params'] !== '') ? $arrRes['params'] : $arrRes['jsonparams'];
 
-		public function tpl_page($AsData,$AisFile=true,$AbProcessFile=false)
+				$Result = $this->executeFunction($arrRes['obj'],$arrRes['class'],$arrRes['func'],$params);
+
+				$arrhtml = array();
+				foreach($Result['rows'] as $key => &$arrValue)
+				{
+					$aKeys = array();
+					$aVal  = array();
+
+					foreach($arrValue as $key2 => &$value)
+					{
+						$aKeys[] = "{".$key2."}";
+						$aVal[]  = $value;
+					}
+					$arrhtml[$key] = str_ireplace($aKeys, $aVal, $loop);
+				}
+				$AsHTML = str_ireplace($outerhtml, implode($arrhtml), $AsHTML);
+			}
+		}
+
+		public function renderize($AsData,$AisFile=true,$AbProcessFile=false,$AbCleanVars=false)
 		{
 			if ($AbProcessFile)
 			{
 				ob_start();
 					include($AsData);
-					$this->HTML = $this->ms_escape_string(ob_get_contents());
+					$this->HTML = $this->ms_escape(ob_get_contents());
 				ob_end_clean();
 			}
 			else
@@ -365,11 +441,16 @@
 				if ($AisFile)
 					$this->getFileContent($AsData);
 				else
-					$this->HTML = $AsData;
+					$this->HTML = $this->ms_escape($AsData);
 			}
 			$this->runReplaceVars();
 			$this->getMarkups();
 			$this->runLoops();
+			if ($AbCleanVars)
+			{
+				$this->reset();
+			}
+			
 			return $this->HTML;
 		}
 	}
