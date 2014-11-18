@@ -49,10 +49,10 @@
 				<th>Nome</th>
 				
 				<!-- Executes a Function from a Created Object -->
-				{func **obj**="treinador" **func**="getListSearch" **params**="[array;array;'nome';'ASC']"}{/func}
+				{func **obj**="treinador" **func**="search" **params**="[array;array;'nome';'ASC']"}{/func}
 				
 				<!-- Executes a Function from a Created Object -->
-				{hook obj="treinador" func="getListSearch" params="[array;array;'nome';'ASC']"}{/hook}
+				{hook obj="treinador" func="search" params="[array;array;'nome';'ASC']"}{/hook}
 				
 				<!-- Executes a Function from a given Class AND echo the result in this position -->
 				<!-- Dosen\'t need to be created! -->
