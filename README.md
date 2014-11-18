@@ -1,43 +1,46 @@
-teste
-=====
+#Template System
+###A very Simple and Powerful template system!
+
+```sh
 	require_once('TobjAutoTemplate.class.php');
 	$tblAutoTpl = new TobjAutoTemplate();
-	
+```
+```sh
 	/* TABLE CLASS */
 	require_once('dbTblTreinador.class.php');
 	$tblTreinador = new dbTblTreinador();
 	
 	$tblAutoTpl->*addObject*('treinador',$tblTreinador);
-	
-	//Adds a new kind of Markup
-	$tblAutoTpl->**setMarkupType**('pico');
-	// When the Markup is called, executes callback function, overwriting the "TobjAutoTemplate" post actions.
-	// Accepts a created Object "$tblTreinador" or a name "addObject('treinador',$tblTreinador)" as param.
-	$tblAutoTpl->**setCallback**('pico','treinador','testeNew2',array('"Callback Object PICO"'));
-	$tblAutoTpl->setCallback('pico',$tblTreinador,'testeNew2',array('"Callback Class PICO"'));
-	
-	// Also replace other vars as a simple template system
-	$tblAutoTpl->**setVar**('{% pico2 %}','Sou uma variável!');
+```
 
-	function FunccaoNormal($parametro)
-	{
-		return '<br/>FunccaoNormal('.$parametro.')';
-	}
+####Adds a new kind of Markup
+```sh
+	$tblAutoTpl->setMarkupType('pico');
+```
+
+ - When the Markup (pico) is called, executes callback function, overwriting the "TobjAutoTemplate" post actions.
+ - Accepts a created Object "$tblTreinador" or a name "addObject('treinador',$tblTreinador)" as param.
+
+```sh
+	$tblAutoTpl->setCallback('pico','treinador','testeNew2',array('"Callback Object PICO"'));
+	$tblAutoTpl->setCallback('pico',$tblTreinador,'testeNew2',array('"Callback Class PICO"'));
+```
+
+ - Also replace other vars as a simple template system
+
+```sh
+	$tblAutoTpl->setVar('{% pico2 %}','Sou uma variável!');
+```
+ - Calling a File
+
+```sh
+    /* public function renderize($AsFileHTML,$AisFile=true,$AbProcessFile=false,$AbCleanVars=false) */
+  	$html = $tblAutoTpl->renderize('demohtml.php',true,true);
+```
+
+#Exemple: **demohtml.php**
 	
-	// Calling a File
-	<?php
-  	/*
-  	* tpl_page($AsData,$AisFile=true,$AbProcessFile=false)
-  	*
-  	* @AsData: Accepts a String or a File Path (string)
-  	* @AisFile: State if it's a String or a File Path (true/false)
-  	* @AbProcessFile: Process File as a normal PHP (true/false)
-  	*/
-	  echo $tblAutoTpl->**tpl_page**('demohtml.php',true,true);
-	?>
-	
-	//FILE: **demohtml.php**
-	
+```sh
 		<?php /* execute some php code */ ?>
 		<table>
 		<thead>
@@ -45,35 +48,35 @@ teste
 				<th>ID</th>
 				<th>Nome</th>
 				
-				// Executes a Function from a Created Object
+				<!-- Executes a Function from a Created Object -->
 				{func **obj**="treinador" **func**="getListSearch" **params**="[array;array;'nome';'ASC']"}{/func}
 				
-				// Executes a Function from a Created Object
+				<!-- Executes a Function from a Created Object -->
 				{hook obj="treinador" func="getListSearch" params="[array;array;'nome';'ASC']"}{/hook}
 				
-				// Executes a Function from a given Class AND echo the result in this position
-				// Dosen't need to be created!
+				<!-- Executes a Function from a given Class AND echo the result in this position -->
+				<!-- Dosen\'t need to be created! -->
 				{echo **class**="dbTblTreinador" func="testeNew3" params="['Markup novo PICO']"}{/echo}
 				
-				// Executes a normal Function AND echo the result in this position
+				<!-- Executes a normal Function AND echo the result in this position -->
 				{echo **func**="FunccaoNormal" **params**="['Markup novo PICO']"}{/echo}
 				
-				// Executes a Function from a Created Object
+				<!-- Executes a Function from a Created Object -->
 				{hook obj="treinador" func="testeNew" params="[]"}{/hook}
 				
-				// Executes a Function from a Created Object
+				<!-- Executes a Function from a Created Object -->
 				{func obj="treinador" func="testeNew" params="[]"}{/func}
 				
-				// Executes a Function from a Created Object AND echo the result in this position
-				// JSON (url-encoded) params are passed into the Function
+				<!-- Executes a Function from a Created Object AND echo the result in this position -->
+				<!-- JSON (url-encoded) params are passed into the Function -->
 				{echo obj="treinador" func="testeNew2" **jsonparams**="%5B%5B1,2,3%5D%2C%5B4,5,6%5D%2C%22nomejson%22%2C%22ASCJSON%22%5D" **jsonencode**="urlencode"}3{/echo}
 			</tr>
 		</thead>
 		<tbody>
-		  // Executes a Function from a Created Object AND replace the values inside the "loop" tags.
-		  // return **array['ROW']** = array(0=>['id'=>'123', 'nome'=>'Paulo José Mota'],
-		  //                             1=>['id'=>'456', 'nome'=>'Pedro Miguel Mota']);
-			{loop obj="treinador" func="getListSearch" params="[array;array;'nome';'ASC']"}
+		  <!-- Executes a Function from a Created Object AND replace the values inside the "loop" tags. -->
+		  <!-- return array = array(0=>['id'=>'123', 'name'=>'Paulo José Mota'], -->
+		  <!-- 			    1=>['id'=>'456', 'name'=>'Pedro Miguel Mota']); -->
+			{loop obj="treinador" func="search" params="['name';'P']"}
 			<tr>
 			  	<!-- echo: 1, 2, 3, 4 (Automaticaly) -->
 			  	<td>**{i}**</td>
