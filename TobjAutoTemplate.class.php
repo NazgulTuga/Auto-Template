@@ -352,9 +352,8 @@
 							case 'loop':
 								{
 									$arrhtml = array();
-									$ResultsRow = (isset($Result['rows'])) ? $Result['rows'] : $Result;
 									
-									foreach($ResultsRow as $key => &$arrValue)
+									foreach($Result as $key => &$arrValue)
 									{
 										$aKeys = array();
 										$aVal  = array();
@@ -427,21 +426,21 @@
 			}
 		}
 
-		public function renderize($AsData,$AisFile=true,$AbProcessFile=false,$AbCleanVars=false)
+		public function renderize($AsFileHTML,$AisFile=true,$AbProcessFile=false,$AbCleanVars=false)
 		{
 			if ($AbProcessFile)
 			{
 				ob_start();
-					include($AsData);
+					include($AsFileHTML);
 					$this->HTML = $this->ms_escape(ob_get_contents());
 				ob_end_clean();
 			}
 			else
 			{
 				if ($AisFile)
-					$this->getFileContent($AsData);
+					$this->getFileContent($AsFileHTML);
 				else
-					$this->HTML = $this->ms_escape($AsData);
+					$this->HTML = $this->ms_escape($AsFileHTML);
 			}
 			$this->runReplaceVars();
 			$this->getMarkups();
