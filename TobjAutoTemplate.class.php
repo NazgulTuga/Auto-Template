@@ -33,10 +33,14 @@
 		public $listObjects 	= array();
 		public $listFunctions 	= array();
 		public $listValues 		= array();
+		public $listKeys 		= array();
 		public $listPostActions = array();
 		public $HTML 			= '';
 		public static $listCallbacks  = array();
 		public static $listMarkupType = array('echo','form','func','hook','loop');
+		public $keys 			= array();
+		public $values 			= array();
+
 
 		public function __construct()
 		{
@@ -47,6 +51,7 @@
 			unset($this->listObjects);
 			unset($this->listFunctions);
 			unset($this->listValues);
+			unset($this->listKeys);
 			unset($this->listPostActions);
 			#unset(self::$listCallbacks);
 			unset($this->HTML);
@@ -70,17 +75,53 @@
 			}
 			#"\n"
 			$search  = array("\0","\r","\x1a","\t");
-			$data 	 = str_replace($search,'',$data);
-
-			return trim($data);
+			return trim(str_replace($search,'',$data));
 		}
 		###########################################################################################
 		private function setAsBoolean($AsBoolString) 		{ return filter_var($AsBoolString,FILTER_VALIDATE_BOOLEAN); }
 		private function resetListFunctions() 				{ $this->listFunctions 		= array(); }
 		private function resetListValues() 					{ $this->listValues 		= array(); }
+		private function resetListKeys() 					{ $this->listKeys 			= array(); }
 		private function resetListPostActions() 			{ $this->listPostActions 	= array(); }
-		public function setMarkupType($AsMarkupName) 		{ self::$listMarkupType[]  = $AsMarkupName; }
-		public function setVar($AKey, $AValue) 				{ $this->listValues[$AKey] = $AValue; }
+		private function resetKeys() 						{ $this->keys 				= array(); }
+		private function resetValues() 						{ $this->values 			= array(); }
+		
+		public function setMarkupType($AsMarkupName) 		{ self::$listMarkupType[] = $AsMarkupName; }
+		public function setKey($key,$value='')
+		{
+			$this->keys[]   = "{".$key."}";
+			$this->values[] = $value;
+		}
+		public function setVar($key, $value='')
+		{
+			if (is_array($key))
+			{
+				if (isset($key[0]))
+				{
+					foreach ($key as $idx => $valx)
+					{
+						foreach ($valx as $key2 => $value2)
+						{
+							$this->listKeys[]   = '{'.$key2.'}';
+							$this->listValues[] = $value2;
+						}
+					}
+				}
+				else
+				{
+					foreach ($key as $idx => $valx)
+					{
+						$this->listKeys[]   = '{'.$idx.'}';
+						$this->listValues[] = $valx;
+					}
+				}
+			}
+			else
+			{
+				$this->listKeys[]   = $key;
+				$this->listValues[] = $value;
+			}
+		}
 		public function setCallback($AsMarkupName,$AObject,$AsFuncName,$AsParams=array(),$AbReplace=false)
 		{
 			if ((!isset(self::$listCallbacks[$AsMarkupName])) || ($AbReplace==true))
@@ -95,18 +136,16 @@
 		{
 			$this->resetListFunctions();
 			$this->resetListValues();
+			$this->resetListKeys();
 			$this->resetListPostActions();
 		}
 		private function getFileContent($AsFileName)
 		{
 			$this->HTML = $this->ms_escape(file_get_contents($AsFileName));
 		}
-		private function runReplaceVars()
+		private function replaceData()
 		{
-			foreach ($this->listValues as $key => $value)
-			{
-				$this->HTML = str_ireplace($key,$value,$this->HTML);
-			}
+			$this->HTML = str_ireplace($this->listKeys,$this->listValues,$this->HTML);
 		}
 
 		private function checkKeyInObject($AsObjName)
@@ -153,9 +192,9 @@
 					'innerhtml' => $output[3][$key]
 				);
 				$att = &$auxArray[$key]['attributes'];
-				if (!isset($att['obj'])) 		$att['obj'] = '';
+				if (!isset($att['obj'])) 		$att['obj']   = '';
 				if (!isset($att['class'])) 		$att['class'] = '';
-				if (!isset($att['func'])) 		$att['func'] = '';
+				if (!isset($att['func'])) 		$att['func']  = '';
 				if (!isset($att['jsonparams'])) $att['jsonparams'] = '';
 				if (!isset($att['jsonencode'])) $att['jsonencode'] = '';
 				if (!isset($att['postaction'])) $att['postaction'] = false;
@@ -174,8 +213,8 @@
 			foreach ($output[0] as $key => $value)
 			{
 				$auxArray[$output[1][$key]] = array();
-				$auxArray[$output[1][$key]]['outerhtml'] 	= $value;
-				$auxArray[$output[1][$key]]['markup'] 		= $output[1][$key];
+				$auxArray[$output[1][$key]]['outerhtml'] = $value;
+				$auxArray[$output[1][$key]]['markup'] 	 = $output[1][$key];
 			}
 			return $auxArray;
 		}
@@ -256,7 +295,7 @@
 			}
 			return $Result;
 		}
-		private function executeFunction($AsObject,$AsClass,$AsFunction,$AsParams)
+		private function callFunction($AsObject,$AsClass,$AsFunction,$AsParams)
 		{
 			$Result = false;
 			if (($AsObject !== '') && ($objTbl = $this->getObject($AsObject)))
@@ -272,12 +311,15 @@
 			else
 			if ($AsFunction !== '')
 			{
-				$Result = call_user_func_array($AsFunction, $AsParams);
+				if (function_exists($AsFunction))
+					$Result = call_user_func_array($AsFunction, $AsParams);
+				else
+					$Result = '';
 			}
 
 			return $Result;
 		}
-		private function runLoops($AaLoops=false)
+		private function runMarkups($AaLoops=false)
 		{
 			if ($AaLoops !== false)
 				$this->listFunctions = $AaLoops;
@@ -304,7 +346,7 @@
 
 				$htmlReplace = '';
 				$Result 	 = false;
-				$Result 	 = $this->executeFunction($arrRes['obj'],$arrRes['class'],$arrRes['func'],$params);
+				$Result 	 = $this->callFunction($arrRes['obj'],$arrRes['class'],$arrRes['func'],$params);
 
 				#Execute an action when function completed? (echo)
 				if (($postaction == true) && (isset($this->listPostActions[$sMarkup])))
@@ -351,27 +393,38 @@
 							case 'form':
 							case 'loop':
 								{
+									# IF "option" is given, add (selected/checked) property to the returned array
+									# @option: 		value that will be checked if matches (Ex: (13=="15")? // (14=="15")? etc)
+									# @statusName: 	checked / selected / other
+									# @fieldName: 	id / name / etc (MUST BE IN the returned array)
+									$optionValue = (isset($arrRes['option'])) ? $arrRes['option'] : '';
+									$statusName  = (isset($arrRes['statusName'])) ? $arrRes['statusName'] : 'selected'; #add {checked/selected} to the LI
+									$fieldName   = (isset($arrRes['fieldName'])) ? $arrRes['fieldName'] : '';
 									$arrhtml = array();
-									
+
 									foreach($Result as $key => &$arrValue)
 									{
-										$aKeys = array();
-										$aVal  = array();
+										$this->resetValues();
+										$this->resetKeys();
 
-										$aKeys[] = '{i}';
-										$aVal[]  = ($key+1);
-										$aKeys[] = '{random}';
-										$aVal[]  = substr(md5(mt_rand(0,999)),0,10);
+										$this->setKey('i', ($key+1));
+										$this->setKey('random', substr(md5(mt_rand(0,999)),0,10));
+										$this->setKey('true', substr(md5(mt_rand(0,999)),0,10));
+										
+										if (($fieldName !== '') && (isset($arrValue[$fieldName])))
+										{
+											$this->setKey($statusName, ($arrValue[$fieldName] === $optionValue) ? $statusName : '');
+											$this->setKey('disabled', ($arrValue[$fieldName] === $optionValue) ? 'disabled' : '');
+										}
 
 										foreach($arrValue as $key2 => &$value)
 										{
-											$aKeys[] = "{".$key2."}";
-											$aVal[]  = (mb_check_encoding($value, 'UTF-8')) ? $value : utf8_encode($value);
+											$this->setKey($key2, (mb_check_encoding($value, 'UTF-8')) ? $value : utf8_encode($value));
 										}
-										$arrhtml[$key] = str_ireplace($aKeys, $aVal, $loop);
-										$this->eventLoop($this->getFunctions($arrhtml[$key]),$arrhtml[$key]);
+										$arrhtml[] = str_ireplace($this->keys, $this->values, $loop);
 									}
-									$htmlReplace = implode($arrhtml);
+
+									$htmlReplace = implode($arrhtml,"\n");
 								} break;
 							case 'hook':
 								{
@@ -383,7 +436,15 @@
 								} break;
 							case 'echo':
 								{
-									$htmlReplace = $Result;
+									if (is_array($Result))
+									{
+										ob_start();
+											var_dump($Result);
+											$htmlReplace = ob_get_contents();
+										ob_end_clean();
+									}
+									else
+										$htmlReplace = $Result;
 								} break;
 							default:
 								{
@@ -397,55 +458,27 @@
 			}
 			$this->HTML = str_ireplace($arrToSearch, $arrToReplace, $this->HTML);
 		}
-		private function eventLoop($AobjLoop,&$AsHTML)
+
+		public function renderize($FileHTML,$isFile=true,$processPHP=false,$cleanVariables=false)
 		{
-			foreach($AobjLoop as $pos => &$arrVal)
-			{
-				$outerhtml 	= $arrVal['outerhtml'];
-				$sMarkup 	= $arrVal['markup'];
-				$loop 		= $arrVal['innerhtml'];
-				$arrRes 	= $arrVal['attributes'];
-				$params 	= ($arrRes['params'] !== '') ? $arrRes['params'] : $arrRes['jsonparams'];
-
-				$Result = $this->executeFunction($arrRes['obj'],$arrRes['class'],$arrRes['func'],$params);
-
-				$arrhtml = array();
-				foreach($Result['rows'] as $key => &$arrValue)
-				{
-					$aKeys = array();
-					$aVal  = array();
-
-					foreach($arrValue as $key2 => &$value)
-					{
-						$aKeys[] = "{".$key2."}";
-						$aVal[]  = $value;
-					}
-					$arrhtml[$key] = str_ireplace($aKeys, $aVal, $loop);
-				}
-				$AsHTML = str_ireplace($outerhtml, implode($arrhtml), $AsHTML);
-			}
-		}
-
-		public function renderize($AsFileHTML,$AisFile=true,$AbProcessFile=false,$AbCleanVars=false)
-		{
-			if ($AbProcessFile)
+			if ($processPHP)
 			{
 				ob_start();
-					include($AsFileHTML);
+					include($FileHTML);
 					$this->HTML = $this->ms_escape(ob_get_contents());
 				ob_end_clean();
 			}
 			else
 			{
-				if ($AisFile)
-					$this->getFileContent($AsFileHTML);
+				if ($isFile)
+					$this->getFileContent($FileHTML);
 				else
-					$this->HTML = $this->ms_escape($AsFileHTML);
+					$this->HTML = $this->ms_escape($FileHTML);
 			}
-			$this->runReplaceVars();
+			$this->replaceData();
 			$this->getMarkups();
-			$this->runLoops();
-			if ($AbCleanVars)
+			$this->runMarkups();
+			if ($cleanVariables)
 			{
 				$this->reset();
 			}
